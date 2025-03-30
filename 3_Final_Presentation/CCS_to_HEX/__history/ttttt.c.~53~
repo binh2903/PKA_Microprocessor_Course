@@ -1,0 +1,166 @@
+#include <16F887.h>
+#fuses XT, NOWDT, NOPROTECT, NOBROWNOUT, NOLVP, NOPUT, NOWRT, NODEBUG, NOCPD
+#use delay(clock=20MHz)
+
+// Cau hinh giao tiep UART voi module CH340G
+#use rs232(baud=9600, xmit=PIN_C6, rcv=PIN_C7, bits=8, parity=N, stop=1)
+
+#include <lcd.c>
+
+// Dinh nghia chan cua HX711
+#define DT1 PIN_C0    // Chan du lieu cua HX711 (ngo vao)
+#define SCK PIN_C1    // Chan xung dong ho cua HX711 (ngo ra)
+
+// Dinh nghia chan LCD (su dung LCD tren Port D)
+#define LCD_E   PIN_D0  
+#define LCD_RS  PIN_D1  
+#define LCD_RW  PIN_D2  
+#define LCD_D4  PIN_D4  
+#define LCD_D5  PIN_D5  
+#define LCD_D6  PIN_D6  
+#define LCD_D7  PIN_D7  
+
+// He so hieu chuan (scale factor) - dieu chinh theo mach can cua ban
+double SCALE = 1;
+
+// Bien chua gia tri khoi luong (don vi: gram)
+volatile float weight = 0.0;
+
+// Kich thuoc cua cua so trung binh
+#define FILTER_SIZE 10
+
+// Mang luu cac lan doc gan nhat va bien toan cuc ho tro
+static unsigned int32 readings[FILTER_SIZE] = {0};
+static unsigned int32 sumFilter = 0;
+static int indexFilter = 0;
+
+/* Ham doc 24-bit du lieu tu HX711 */
+unsigned int32 readCount(void) {
+   unsigned int32 data;
+   unsigned int8 j;
+   
+   // Dam bao SCK o muc logic thap
+   output_bit(SCK, 0);
+   
+   // Cho den khi HX711 san sang (DT1 xuong muc 0)
+   while(input(DT1));
+   
+   data = 0;
+   // Doc 24 bit du lieu
+   for(j = 0; j < 24; j++) {
+      output_bit(SCK, 1);
+      delay_us(1);
+      
+      data = data << 1;
+      
+      output_bit(SCK, 0);
+      delay_us(1);
+      
+      if(input(DT1)) {
+         data++;
+      }
+   }
+   // Xung thu 25 de thiet lap kenh va gain (kenh A voi gain 128)
+   output_bit(SCK, 1);
+   delay_us(1);
+   data = data ^ 0x800000; // Xu ly bit MSB
+   output_bit(SCK, 0);
+   delay_us(1);
+   
+   return data;
+}
+
+/* Ham khoi tao (fill) bo loc de tranh gia tri rac ban dau.
+   Goi ham nay truoc khi lay offset hoac doc chinh thuc */
+void initMovingAverage(void) {
+   int i;
+   unsigned int32 raw = 0;
+   sumFilter = 0;
+   indexFilter = 0;
+   // Doc FILTER_SIZE lan, gan vao mang readings
+   for(i = 0; i < FILTER_SIZE; i++) {
+      raw = readCount();
+      readings[i] = raw;
+      sumFilter += raw;
+   }
+}
+
+/* Ham lay du lieu tu HX711 va ap dung bo loc trung binh truot */
+unsigned int32 readMovingAverage(void) {
+   unsigned int32 raw;
+   // Doc gia tri moi tu HX711
+   raw = readCount();
+   // Tru di gia tri cu nhat, cong gia tri moi
+   sumFilter -= readings[indexFilter];
+   readings[indexFilter] = raw;
+   sumFilter += raw;
+   // Tang index va quay vong
+   indexFilter++;
+   if(indexFilter >= FILTER_SIZE) {
+      indexFilter = 0;
+   }
+   // Tra ve trung binh
+   return (sumFilter / FILTER_SIZE);
+}
+
+void main(void) {
+   unsigned int32 offset, read1;
+   
+   /* Cau hinh huong chan cho Port C:
+      - DT1 (RC0) la ngo vao
+      - SCK (RC1) la ngo ra
+      - RC6 (TX) la ngo ra (UART)
+      - RC7 (RX) la ngo vao (UART)
+      => set_tris cho Port C: bit 0 (RC0)=1, bit 1 (RC1)=0, bit 6 (RC6)=0, bit 7 (RC7)=1
+         cac bit con lai mac dinh la ngo vao.
+   */
+   set_tris_c(0b10000011);
+   setup_adc_ports(NO_ANALOGS);
+   
+   // Khoi tao LCD
+   lcd_init();
+   lcd_putc("HX711 Scale");
+   delay_ms(500);
+   
+   // Khoi tao bo loc (fill du lieu ban dau)
+   initMovingAverage();
+
+   // Lay gia tri tare (offset) ban dau khi chua co tai
+   // (doc trung binh bo loc)
+   {
+      unsigned long temp = 0;
+      // Doc them vai lan de on dinh
+      for(int i = 0; i < 5; i++){
+         temp = readMovingAverage(); 
+         delay_ms(50);
+      }
+      // Gia tri offset lay sau cung
+      offset = temp;
+   }
+   
+   while(TRUE) {
+      // Doc gia tri trung binh tu bo loc (Moving Average)
+      read1 = readMovingAverage();
+      
+      // Tinh khoi luong dua tren hieu so giua offset va gia tri doc duoc
+      if(offset >= read1) {
+         weight = (float)(offset - read1) / SCALE;
+      } else {
+         weight = (float)(read1 - offset) / SCALE;
+      }
+      
+      // Hien thi tren LCD:
+      // Dòng 1 hi?n th? giá tr? kh?i lu?ng
+      lcd_gotoxy(1,1);
+      printf(lcd_putc, "Weight:g");
+      // Dòng 2 hi?n th? "AML"
+      lcd_gotoxy(1,2);
+      printf(lcd_putc, weight );
+      
+      // Gui du lieu khoi luong qua UART sang may tinh
+      printf("Weight: %.2f g\r\n", weight);
+      
+      delay_ms(100);
+   }
+}
+

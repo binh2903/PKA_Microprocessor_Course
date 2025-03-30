@@ -1,0 +1,245 @@
+/**************************************************************************************
+*   Balanza Digital con PIC16F877A + HX711 + Celda de Carga de 5kg                   *
+*                                                                                     *
+*   by Sergio Andres Castaño Giraldo (Adaptado)                                       *
+*   website: https://controlautomaticoeducacion.com/                                  *
+*   YouTube Chanel: https://www.youtube.com/channel/UCdzSnI03LpBI_8gXJseIDuw          *
+**************************************************************************************/ 
+
+#include <16F877A.h>
+#fuses XT, NOWDT, NOPROTECT, NOBROWNOUT, NOLVP, NOPUT, NOWRT, NODEBUG, NOCPD
+#use delay(clock = 20MHz)
+
+// S? d?ng giao ti?p LCD song song (ví d? thu vi?n lcd.c)
+#define use_portb_lcd TRUE 
+#include <lcd.c>
+
+// Ð?nh nghia chân nút
+#define MODO       PIN_B4
+#define TARA       PIN_B5
+
+// Ð?nh nghia chân c?a HX711
+#define DT1 PIN_C0    // Chân d? li?u c?a HX711 (ngõ vào)
+#define SCK PIN_C1    // Chân xung d?ng h? c?a HX711 (ngõ ra)
+
+// Bi?n hi?u chu?n (scale factor) và bi?n d? tính kh?i lu?ng
+// Dùng m?t bi?n toàn c?c "escala" cho hi?u chu?n load cell
+float escala = 36.0;  // Ban d?u d?t 36.0 (s?a l?i sau khi hi?u chu?n)
+volatile float weight = 0.0;
+
+// ---------------- HX711 Functions ----------------
+
+// Hàm d?c 24-bit d? li?u t? HX711
+unsigned int32 readCount(void) {
+   unsigned int32 data;
+   unsigned int8 j;
+   
+   output_bit(SCK, 0);
+   // Ch? d?n khi DT1 xu?ng m?c 0 (HX711 s?n sàng truy?n d? li?u)
+   while(input(DT1));
+   
+   data = 0;
+   for(j = 0; j < 24; j++) {
+      output_bit(SCK, 1);
+      data = data << 1;
+      output_bit(SCK, 0);
+      if(input(DT1)) {
+         data++;
+      }
+   }
+   // Xung th? 25 d? thi?t l?p kênh và gain (kenh A, gain 128)
+   output_bit(SCK, 1);
+   data = data ^ 0x800000;  // X? lý bit MSB chuy?n sang s? có d?u
+   output_bit(SCK, 0);
+   
+   return data;
+}
+
+// Hàm l?y giá tr? trung bình 20 l?n d?c (giúp gi?m nhi?u)
+int32 readAverage(void) {
+   unsigned int32 sum = 0;
+   int k;
+   for(k = 0; k < 20; k++) {
+      sum += readCount();
+   }
+   return (sum / 20);
+}
+
+// ---------------- EEPROM Functions ----------------
+
+// Hàm ghi ki?u float vào EEPROM
+void WRITE_FLOAT_EEPROM(long int n, float data) { 
+   int i;
+   for(i = 0; i < 4; i++) {
+      write_eeprom(i + n, *((int8*)&data + i));
+   }
+}
+
+// Hàm d?c ki?u float t? EEPROM
+float READ_FLOAT_EEPROM(long int n) { 
+   int i; 
+   float data;
+   for(i = 0; i < 4; i++) {
+      *((int8*)&data + i) = read_eeprom(i + n);
+   }
+   return(data);
+}
+
+// ---------------- Các hàm b? sung cho HX711 ----------------
+
+// Hàm kh?i t?o HX711 (gain du?c c? d?nh qua 25x xung trong readCount())
+void init_hx(int gain) {
+   // V?i PIC16F877A, n?u không c?n c?u hình gain khác, d? tr?ng.
+}
+
+// Hàm thi?t l?p hi?u chu?n (scale factor)
+void set_scale(float s) {
+   escala = s;
+}
+
+// Bi?n toàn c?c luu giá tr? tare (offset)
+unsigned int32 global_offset = 0;
+
+// Hàm cân b?ng (tare): l?y trung bình N l?n d?c và luu vào global_offset
+void tare(int times) {
+   unsigned long temp = 0;
+   int i;
+   for(i = 0; i < times; i++){
+      temp += readAverage();
+      delay_ms(50);
+   }
+   global_offset = temp / times;
+}
+
+// Hàm l?y don v? tr?ng lu?ng (gram) d?a trên hi?u s? gi?a giá tr? hi?n t?i và tare
+float get_units(int times) {
+   unsigned int32 reading = readAverage();
+   if(global_offset >= reading)
+      return (float)(global_offset - reading) / escala;
+   else
+      return (float)(reading - global_offset) / escala;
+}
+
+// Hàm l?y giá tr? thô (dã trung bình) c?a HX711
+int32 get_value(int times) {
+   return readAverage();
+}
+
+// ---------------- Calibration ----------------
+
+float peso_conocido[4] = {550, 1000, 3000, 5000};
+
+void calibration(){
+  int i = 0, cal = 1;
+  int32 adc_lecture;
+  
+  lcd_gotoxy(2,1);        
+  printf(lcd_putc, "Calibracion de");
+  lcd_gotoxy(4,2);        
+  printf(lcd_putc, "Balanza");
+  delay_ms(1500);
+  
+  tare(10);  // Giá tr? hi?n t?i du?c xem là tara.
+  lcd_putc("\f");  // Xóa màn hình
+  
+  while(cal == 1){
+    lcd_gotoxy(1,1);        
+    printf(lcd_putc, "Peso Conocido:");
+    lcd_gotoxy(1,2);
+    printf(lcd_putc, "%4.0f g             ", peso_conocido[i]);
+    
+    if(input(TARA) == 1){  
+      delay_ms(200);
+      i = (i > 2) ? 0 : i + 1;
+    }
+
+    if(input(MODO)){
+      delay_ms(200);
+      lcd_putc("\f");
+      lcd_gotoxy(1,1);        
+      printf(lcd_putc, "Ponga el Peso");
+      lcd_gotoxy(1,2);        
+      printf(lcd_putc, "y espere ...");
+      
+      delay_ms(3000);
+
+      adc_lecture = get_value(10);
+      // Tính SCALE d?a trên giá tr? d?c du?c chia cho t?i tr?ng dã bi?t
+      escala = adc_lecture / peso_conocido[i];
+      WRITE_FLOAT_EEPROM(0, escala);
+      
+      delay_ms(100);
+      cal = 0;
+      lcd_putc("\f");
+    }
+  }
+}
+
+// ---------------- Main ----------------
+
+void main(void) {  
+     float peso = 0, factor = 1;
+     int unidad = 1;
+     
+     lcd_init();
+     lcd_putc("\f");
+     
+     init_hx(128);   // Kh?i t?o HX711 v?i gain = 128
+     lcd_putc("\f");
+     
+     // Ð?c SCALE t? EEPROM
+     escala = READ_FLOAT_EEPROM(0);  
+      
+     // N?u nh?n d?ng th?i nút MODO và TARA, vào ch? d? hi?u chu?n
+     if(input(MODO) == 1 && input(TARA) == 1)
+          calibration();
+          
+     lcd_gotoxy(1,1);        
+     printf(lcd_putc, "Retire el Peso");
+     lcd_gotoxy(1,2);        
+     printf(lcd_putc, "y espere ...");
+     set_scale(escala);
+     tare(10);
+     delay_ms(2000);
+     lcd_putc("\f");
+     
+     lcd_gotoxy(1,1);        
+     printf(lcd_putc, "Listo....");
+     delay_ms(3000);
+     lcd_putc("\f");
+     tare(10);
+     
+     while(1){
+          peso = get_units(10);  // Ð?c tr?ng lu?ng (gram)
+          lcd_gotoxy(3,1);        
+          printf(lcd_putc, "Balanza CAE"); 
+           
+          switch (unidad) {
+               case 1:        
+                    factor = 1.0;
+                    lcd_gotoxy(1,2);        
+                    printf(lcd_putc, "Peso: %4.1f g       ", peso / factor); 
+                    break;
+               case 2:
+                    factor = 1000.0;
+                    lcd_gotoxy(1,2);        
+                    printf(lcd_putc, "Peso: %4.2f Kg       ", peso / factor); 
+                    break;
+               case 3:
+                    factor = 28.35;
+                    lcd_gotoxy(1,2);        
+                    printf(lcd_putc, "Peso: %4.2f oz       ", peso / factor); 
+                    break;
+          }
+          if(input(TARA) == 1){
+               delay_ms(200);
+               tare(10);
+          }
+          if(input(MODO) == 1){
+               delay_ms(200);
+               unidad = (unidad > 2) ? 1 : unidad + 1;
+          }
+          delay_ms(100);
+     }
+}
+

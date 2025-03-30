@@ -1,0 +1,90 @@
+#include <16F887.h>
+#fuses XT, NOWDT, NOPROTECT, NOBROWNOUT, NOLVP, NOPUT, NOWRT, NODEBUG, NOCPD
+#use delay(clock=20MHz)
+
+#include <lcd.c>
+
+// Dinh nghia chan cua HX711
+#define DT1 PIN_C0    // Chan du lieu cua HX711 (ngo vao)
+#define SCK PIN_C1    // Chan xung dong ho cua HX711 (ngo ra)
+
+// Neu can hien thi len LCD, su dung Port B
+#define use_portb_lcd TRUE 
+
+// He so hieu chuan (scale factor) – dieu chinh theo mach can cua ban
+double SCALE = 36.0;
+
+// Bien chua gia tri khoi luong (don vi: gram)
+volatile float weight = 0.0;
+
+/* Ham doc 24-bit du lieu tu HX711 */
+unsigned int32 readCount(void) {
+   unsigned int32 data;
+   unsigned int8 j;
+   
+   // Dat DT1 len 1 (chi de cho truoc, tuy theo m?ch nang cao)
+   output_bit(DT1, 1);
+   // Dat SCK xuong muc thap
+   output_bit(SCK, 0);
+   data = 0;
+   
+   // Cho den khi DT1 xuong muc 0 (HX711 san sang truyen du lieu)
+   while(input(DT1));
+   
+   // Doc 24 bit du lieu
+   for(j = 0; j < 24; j++) {
+      output_bit(SCK, 1);
+      data = data << 1;
+      output_bit(SCK, 0);
+      if (input(DT1)) {
+         data++;
+      }
+   }
+   // Xung thu 25 de thiet lap kenh va de tang gain (gain 128, kenh A)
+   output_bit(SCK, 1);
+   data = data ^ 0x800000;  // Xu ly bit MSB de chuyen sang so co dau
+   output_bit(SCK, 0);
+   
+   return data;
+}
+
+/* Ham lay gia tri trung binh cua 20 lan doc de giam noi */
+int32 readAverage(void) {
+   unsigned int32 sum = 0;
+   int k;
+   for(k = 0; k < 20; k++) {
+      sum += readCount();
+   }
+   return (sum / 20);
+}
+
+void main(void) {
+   unsigned int32 offset, read1;
+   
+   // Khoi tao LCD
+   lcd_init();
+   lcd_putc("HX711 Scale");
+   delay_ms(500);
+   
+   // Lay gia tri tare (offset) ban dau khi chua co tai
+   offset = readAverage();
+   
+   while(TRUE) {
+      // Doc gia tri trung binh tu HX711
+      read1 = readAverage();
+      
+      // Tinh khoi luong dua tren hieu so giua offset va gia tri doc duoc
+      if (offset >= read1) {
+         weight = (float)(offset - read1) / SCALE;
+      } else {
+         weight = (float)(read1 - offset) / SCALE;
+      }
+      
+      // Hien thi khoi luong len LCD
+      printf(lcd_putc, "\fWeight: %.2f g", weight);
+      
+      // Cap nhat moi 500ms
+      delay_ms(500);
+   }
+}
+

@@ -1,0 +1,152 @@
+#include <16F887.h>
+#fuses XT, NOWDT, NOPROTECT, NOBROWNOUT, NOLVP, NOPUT, NOWRT, NODEBUG, NOCPD
+#use delay(clock=20MHz)
+
+// C?u hình giao ti?p UART v?i module CH340G
+#use rs232(baud=9600, xmit=PIN_C6, rcv=PIN_C7, bits=8, parity=N, stop=1)
+
+#include <lcd.c>
+
+// Ð?nh nghia chân c?a HX711
+#define DT1 PIN_C0    // Chân d? li?u c?a HX711 (ngõ vào)
+#define SCK PIN_C1    // Chân xung d?ng h? c?a HX711 (ngõ ra)
+
+// Ð?nh nghia chân LCD (s? d?ng LCD trên Port D)
+#define LCD_E   PIN_D0  
+#define LCD_RS  PIN_D1  
+#define LCD_RW  PIN_D2  
+#define LCD_D4  PIN_D4  
+#define LCD_D5  PIN_D5  
+#define LCD_D6  PIN_D6  
+#define LCD_D7  PIN_D7  
+
+// H? s? hi?u chu?n (scale factor) - di?u ch?nh theo m?ch cân c?a b?n
+double SCALE = 1;  // Ði?u ch?nh SCALE theo hi?u chu?n load cell
+
+// Bi?n ch?a giá tr? kh?i lu?ng (don v?: gram)
+volatile float weight = 0.0;
+
+// B? l?c Moving Average: tang kích thu?c b? l?c d? làm m?n hon
+#define FILTER_SIZE 50
+
+// M?ng luu các l?n do g?n nh?t và các bi?n h? tr? cho Moving Average
+static unsigned int32 readings[FILTER_SIZE] = {0};
+static unsigned int32 sumFilter = 0;
+static int indexFilter = 0;
+
+/* Hàm d?c 24-bit d? li?u t? HX711 */
+unsigned int32 readCount(void) {
+   unsigned int32 data;
+   unsigned int8 j;
+   
+   output_bit(SCK, 0);
+   while(input(DT1));
+   data = 0;
+   for(j = 0; j < 24; j++) {
+      output_bit(SCK, 1);
+      delay_us(1);
+      
+      data = data << 1;
+      
+      output_bit(SCK, 0);
+      delay_us(1);
+      
+      if(input(DT1)) {
+         data++;
+      }
+   }
+   // Xung th? 25 d? thi?t l?p kênh và gain (kenh A v?i gain 128)
+   output_bit(SCK, 1);
+   delay_us(1);
+   data = data ^ 0x800000;
+   output_bit(SCK, 0);
+   delay_us(1);
+   
+   return data;
+}
+
+/* Hàm kh?i t?o b? l?c Moving Average (fill m?ng ban d?u) */
+void initMovingAverage(void) {
+   int i;
+   unsigned int32 raw = 0;
+   sumFilter = 0;
+   indexFilter = 0;
+   for(i = 0; i < FILTER_SIZE; i++) {
+      raw = readCount();
+      readings[i] = raw;
+      sumFilter += raw;
+   }
+}
+
+/* Hàm l?y d? li?u t? HX711 và áp d?ng b? l?c Moving Average */
+unsigned int32 readMovingAverage(void) {
+   unsigned int32 raw;
+   raw = readCount();
+   sumFilter -= readings[indexFilter];
+   readings[indexFilter] = raw;
+   sumFilter += raw;
+   indexFilter++;
+   if(indexFilter >= FILTER_SIZE) {
+      indexFilter = 0;
+   }
+   return (sumFilter / FILTER_SIZE);
+}
+
+/* Hàm l?c mu (Exponential Smoothing) d? làm m?n giá tr? tr?ng lu?ng */
+float smoothWeight(float current, float previous) {
+   float alpha = 0.1; // H? s? l?c, di?u ch?nh t? 0 d?n 1 (alpha nh? hon: mu?t hon, ph?n h?i ch?m hon)
+   return alpha * current + (1 - alpha) * previous;
+}
+
+void main(void) {
+   unsigned int32 offset, read1;
+   float current_weight, filtered_weight;
+   filtered_weight = 0.0; // Kh?i t?o giá tr? l?c ban d?u
+
+   // C?u hình Port C: RC0 (DT1) - input, RC1 (SCK) - output, RC6 (TX) - output, RC7 (RX) - input
+   set_tris_c(0b10000011);
+   setup_adc_ports(NO_ANALOGS);
+   
+   // Kh?i t?o LCD
+   lcd_init();
+   lcd_putc("HX711 Scale");
+   delay_ms(500);
+   
+   // Kh?i t?o b? l?c Moving Average
+   initMovingAverage();
+
+   // L?y giá tr? tare (offset) khi không có t?i
+   {
+      unsigned long temp = 0;
+      for(int i = 0; i < 5; i++){
+         temp = readMovingAverage();
+         delay_ms(50);
+      }
+      offset = temp;
+   }
+   
+   while(TRUE) {
+      // L?y giá tr? trung bình t? b? l?c Moving Average
+      read1 = readMovingAverage();
+      
+      // Tính tr?ng lu?ng d?a trên hi?u s? so v?i offset
+      if(offset >= read1) {
+         current_weight = (float)(offset - read1) / SCALE;
+      } else {
+         current_weight = (float)(read1 - offset) / SCALE;
+      }
+      
+      // Áp d?ng b? l?c mu cho giá tr? kh?i lu?ng
+      filtered_weight = smoothWeight(current_weight, filtered_weight);
+      
+      // S? d?ng ch? bi?n filtered_weight d? hi?n th? và g?i d? li?u:
+      lcd_gotoxy(1,1);
+      printf(lcd_putc, "W:%.2f g", filtered_weight);
+      
+      // G?i d? li?u qua UART
+      printf("Weight: %.2f g\r\n", filtered_weight);
+      
+      delay_ms(50);
+   }
+}
+

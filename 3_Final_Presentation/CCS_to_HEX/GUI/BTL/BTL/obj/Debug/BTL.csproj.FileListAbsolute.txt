@@ -1,0 +1,10 @@
+C:\Users\NguyenAnh\Desktop\B-1\GUI\BTL\BTL\obj\Debug\BTL.csproj.AssemblyReference.cache
+C:\Users\NguyenAnh\Desktop\B-1\GUI\BTL\BTL\obj\Debug\HX711WeightReceiver.Form1.resources
+C:\Users\NguyenAnh\Desktop\B-1\GUI\BTL\BTL\obj\Debug\BTL.Properties.Resources.resources
+C:\Users\NguyenAnh\Desktop\B-1\GUI\BTL\BTL\obj\Debug\BTL.csproj.GenerateResource.cache
+C:\Users\NguyenAnh\Desktop\B-1\GUI\BTL\BTL\obj\Debug\BTL.csproj.CoreCompileInputs.cache
+C:\Users\NguyenAnh\Desktop\B-1\GUI\BTL\BTL\bin\Debug\BTL.exe.config
+C:\Users\NguyenAnh\Desktop\B-1\GUI\BTL\BTL\bin\Debug\BTL.exe
+C:\Users\NguyenAnh\Desktop\B-1\GUI\BTL\BTL\bin\Debug\BTL.pdb
+C:\Users\NguyenAnh\Desktop\B-1\GUI\BTL\BTL\obj\Debug\BTL.exe
+C:\Users\NguyenAnh\Desktop\B-1\GUI\BTL\BTL\obj\Debug\BTL.pdb

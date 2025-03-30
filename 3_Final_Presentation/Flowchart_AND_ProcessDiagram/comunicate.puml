@@ -1,0 +1,12 @@
+@startuml
+start
+:Initialize Project;
+:Load Assembly Info;
+if (COM Visible?) then (yes)
+  :Set ComVisible to true;
+else (no)
+  :Set ComVisible to false;
+endif
+:Generate GUID;
+:Define Version Information;
+stop

@@ -1,0 +1,35 @@
+@startuml So_do_khoi_he_thong_can_dien_tu
+
+title Sơ đồ khối hệ thống cân điện tử
+
+rectangle "Khối nguồn" as PowerSupply
+rectangle "Khối cảm biến\nLoadcell" as LoadCell
+rectangle "Khối khuếch đại & chuyển đổi ADC\nHX711" as HX711
+rectangle "Khối xử lý trung tâm\nVi điều khiển PIC16F887" as Microcontroller
+rectangle "Khối giao tiếp\nLCD " as LCD
+rectangle "Khối lập trình\nProgrammer" as Programmer
+rectangle "Khối nút nhấn" as Buttons
+
+PowerSupply -down-> LoadCell : Cung cấp điện áp ổn định
+PowerSupply -down-> HX711 : Cung cấp điện áp ổn định
+PowerSupply -down-> Microcontroller : Cung cấp điện áp ổn định
+PowerSupply -down-> LCD : Cung cấp điện áp ổn định
+
+LoadCell -down-> HX711 : Gửi tín hiệu điện
+HX711 -down-> Microcontroller : Gửi tín hiệu số khuếch đại
+
+Microcontroller -down-> HX711 : Đọc dữ liệu
+Microcontroller -down-> LCD : Hiển thị khối lượng
+
+Buttons -down-> Microcontroller : Gửi lệnh
+Microcontroller -down-> LCD : Cập nhật hiển thị
+
+Programmer -down-> Microcontroller : Nạp chương trình
+
+@enduml
+Buttons -> Microcontroller : Gửi lệnh
+Microcontroller -> LCD : Cập nhật hiển thị
+
+Programmer -> Microcontroller : Nạp chương trình
+
+@enduml

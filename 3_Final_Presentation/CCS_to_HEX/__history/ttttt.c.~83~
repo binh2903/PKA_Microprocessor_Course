@@ -1,0 +1,149 @@
+#include <16F887.h>
+#fuses HS, NOWDT, NOPROTECT, NOBROWNOUT, NOLVP, NOPUT, NOWRT, NODEBUG, NOCPD
+#use delay(clock = 20000000)
+#use rs232(baud=9600, xmit=PIN_C6, rcv=PIN_C7, bits=8)  // UART TX trên C6, RX trên C7
+
+#include <lcd.c>
+
+#define DT1 PIN_C0
+#define SCK PIN_C1
+#define TARE_BUTTON PIN_C2
+
+#define use_portb_lcd TRUE
+
+double SCALE = 36.0 * 25.595;
+volatile float weight = 0.0;
+volatile int8 unit_mode = 0;
+volatile int16 count_ms = 0;
+volatile int16 tare_debounce_timer = 0;
+
+const float unit_factors[] = {1.0, 0.03527396, 0.03215075, 0.6430149, 5.0, 15.43236, 0.02671725};
+volatile int8 last_button_state = 1;
+
+#INT_TIMER1
+void timer1_isr()
+{
+    set_timer1(60536);
+    count_ms++;
+    int8 current_button_state = input(TARE_BUTTON);
+    if(last_button_state!=current_button_state)
+    {
+        current_button_state=input(TARE_BUTTON);
+    }
+    if (current_button_state == 0)
+    {
+        tare_debounce_timer++;
+        if (tare_debounce_timer == 40)
+        {
+        delay_ms(10);
+            unit_mode = (unit_mode + 1) % 7;
+        }
+    }
+    else
+    {
+        tare_debounce_timer = 0;
+    }
+    last_button_state = current_button_state;
+}
+
+unsigned int32 readCount(void)
+{
+    unsigned int32 data = 0;
+    unsigned int8 j;
+
+    output_bit(DT1, 1);
+    output_bit(SCK, 0);
+    while (input(DT1));
+    
+    for (j = 0; j < 24; j++)
+    {
+        output_bit(SCK, 1);
+        data = data << 1;
+        output_bit(SCK, 0);
+        if (input(DT1))
+        {
+            data++;
+        }
+    }
+
+    output_bit(SCK, 1);
+    data = data ^ 0x800000;
+    output_bit(SCK, 0);
+    return data;
+}
+
+int32 readAverage(void)
+{
+unsigned int32 sum = 0;
+   int k;
+   for(k = 0; k < 3; k++) {
+      sum += readCount();
+   }
+   return (sum / 3);
+    return readCount();
+}
+
+void main(void)
+{
+    output_high(TARE_BUTTON);
+    unsigned int32 offset, read1;
+
+    lcd_init();
+    lcd_putc("HX711 Scale");
+    delay_ms(500);
+
+    setup_timer_1(T1_INTERNAL | T1_DIV_BY_2);
+    set_timer1(60536);
+    enable_interrupts(INT_TIMER1);
+    enable_interrupts(GLOBAL);
+
+    offset = readAverage();
+
+    while (TRUE)
+    {
+        if (count_ms >= 20)
+        {
+            count_ms = 0;
+            read1 = readAverage();
+
+            if (offset >= read1)
+            {
+                weight = (float)(offset - read1) / SCALE;
+                if (weight < 1) weight = 0;
+            }
+            else
+            {
+                weight = (float)(read1 - offset) / SCALE;
+                if (weight < 1) weight = 0;
+            }
+            
+            float converted_weight = weight * unit_factors[unit_mode];
+            lcd_putc("\fWeight:");
+            
+            switch(unit_mode) {
+                case 0: printf(lcd_putc, "\n%.2f g", converted_weight); break;
+                case 1: printf(lcd_putc, "\n%.2f oz", converted_weight); break;
+                case 2: printf(lcd_putc, "\n%.2f ozt", converted_weight); break;
+                case 3: printf(lcd_putc, "\n%.2f dwt", converted_weight); break;
+                case 4: printf(lcd_putc, "\n%.2f ct", converted_weight); break;
+                case 5: printf(lcd_putc, "\n%.2f gn", converted_weight); break;
+                case 6: printf(lcd_putc, "\n%.2f tl", converted_weight); break;
+            }
+
+            // G?i d? li?u qua UART
+             switch(unit_mode) {
+                case 0: printf("\r\nWeight: %.2f g\r\n", converted_weight); break;
+                case 1: printf("\r\nWeight: %.2f oz\r\n", converted_weight); break;
+                case 2: printf("\r\nWeight: %.2f ozt\r\n", converted_weight); break;
+                case 3: printf("\r\nWeight: %.2f dwt\r\n", converted_weight); break;
+                case 4: printf("\r\nWeight: %.2f ct\r\n", converted_weight); break;
+                case 5: printf("\r\nWeight: %.2f gn\r\n", converted_weight); break;
+                case 6: printf("\r\nWeight: %.2f tl\r\n", converted_weight); break;
+            }
+
+            delay_ms(5);
+        }
+    }
+}
+
+

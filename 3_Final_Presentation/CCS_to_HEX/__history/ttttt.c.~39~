@@ -1,0 +1,115 @@
+#include <16F887.h>
+#fuses XT, NOWDT, NOPROTECT, NOBROWNOUT, NOLVP, NOPUT, NOWRT, NODEBUG, NOCPD
+#use delay(clock=20MHz)
+
+#include <lcd.c>
+
+// Dinh nghia chan cua HX711
+#define DT1 PIN_C0    // Chan du lieu cua HX711 (ngo vao)
+#define SCK PIN_C1    // Chan xung dong ho cua HX711 (ngo ra)
+
+// Dinh nghia chan LCD (su dung LCD tren Port D)
+#define LCD_E   PIN_D0  
+#define LCD_RS  PIN_D1  
+#define LCD_RW  PIN_D2  
+#define LCD_D4  PIN_D4  
+#define LCD_D5  PIN_D5  
+#define LCD_D6  PIN_D6  
+#define LCD_D7  PIN_D7  
+
+// He so hieu chuan (scale factor) - dieu chinh theo mach can cua ban
+double SCALE = 36.0;
+
+// Bien chua gia tri khoi luong (don vi: gram)
+volatile float weight = 0.0;
+
+// Ham doc 24-bit du lieu tu HX711
+unsigned int32 readCount(void) {
+   unsigned int32 data;
+   unsigned int8 j;
+   
+   // Dam bao SCK o muc logic thap
+   output_bit(SCK, 0);
+   
+   // Cho den khi HX711 san sang (DT1 xuong muc 0)
+   while(input(DT1));
+   
+   data = 0;
+   // Doc 24 bit du lieu
+   for(j = 0; j < 24; j++) {
+      output_bit(SCK, 1);
+      delay_us(1);
+      
+      data = data << 1;
+      
+      output_bit(SCK, 0);
+      delay_us(1);
+      
+      if(input(DT1)) {
+         data++;
+      }
+   }
+   // Xung thu 25 de thiet lap kenh va gain (kenh A voi gain 128)
+   output_bit(SCK, 1);
+   delay_us(1);
+   data = data ^ 0x800000;
+   output_bit(SCK, 0);
+   delay_us(1);
+   
+   return data;
+}
+
+// Ham lay gia tri trung binh cua 20 lan doc de giam noi
+int32 readAverage(void) {
+   unsigned int32 sum = 0;
+   int k;
+   for(k = 0; k < 20; k++) {
+      sum += readCount();
+   }
+   return sum / 20;
+}
+
+void main(void) {
+   unsigned int32 offset, read1;
+   
+   /* Cau hinh:
+      - Chan HX711: RC0 (DT1, input) va RC1 (SCK, output)
+      - UART su dung: RC6 (TX, output) va RC7 (RX, input)
+      => set_tris cho Port C: bit 0 (RC0) = 1, bit 1 (RC1) = 0, bit 6 (RC6) = 0, bit 7 (RC7) = 1.
+      Cach thiet lap bit khac de mac dinh (input).
+   */
+   set_tris_c(0b10000011);
+   setup_adc_ports(NO_ANALOGS);
+   
+   // Khoi tao LCD
+   lcd_init();
+   lcd_putc("HX711 Scale");
+   delay_ms(500);
+   
+   // Cau hinh UART voi baudrate 9600 (8-bit, khong parity, 1 stop-bit)
+   setup_uart(9600);
+   
+   // Lay gia tri tare (offset) ban dau khi chua co tai
+   offset = readAverage();
+   
+   while(TRUE) {
+      // Doc gia tri trung binh tu HX711
+      read1 = readAverage();
+      
+      // Tinh khoi luong dua tren hieu so giua offset va gia tri doc duoc
+      if(offset >= read1) {
+         weight = (float)(offset - read1) / SCALE;
+      } else {
+         weight = (float)(read1 - offset) / SCALE;
+      }
+      
+      // Hien thi tren LCD
+      printf(lcd_putc, "\fWeight: %.2f g", weight);
+      
+      // Gui du lieu khoi luong qua UART sang may tinh (truyen xuong CH340G)
+      printf("Weight: %.2f g\r\n", weight);
+      
+      delay_ms(100);
+   }
+}
+

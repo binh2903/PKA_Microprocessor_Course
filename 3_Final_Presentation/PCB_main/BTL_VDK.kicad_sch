@@ -1,0 +1,198 @@
+(kicad_sch
+	(version 20231120)
+	(generator "eeschema")
+	(generator_version "8.0")
+	(uuid "4ce841f4-edcb-46e3-8120-4cec64f42791")
+	(paper "A5")
+	(title_block
+		(title "PIC Project ")
+		(date "2025-03-25")
+	)
+	(lib_symbols)
+	(text "PIC16F887-I/PT"
+		(exclude_from_sim no)
+		(at 105.41 71.12 0)
+		(effects
+			(font
+				(face "TCVN 7284")
+				(size 2 2)
+				(italic yes)
+			)
+			(justify right bottom)
+		)
+		(uuid "bd89a43f-cf5c-4491-a329-9479b91e2461")
+	)
+	(sheet
+		(at 87.63 39.37)
+		(size 31.75 44.45)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 255 153 0 1.0000)
+		)
+		(uuid "0a4b2ddf-7e3c-46ed-9c8c-6acc40856a4b")
+		(property "Sheetname" "MCU"
+			(at 87.63 38.6584 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "MCU.kicad_sch"
+			(at 87.63 84.4046 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(pin "EN_R" output
+			(at 87.63 54.61 180)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+			(uuid "0547ceed-119d-44cf-8df9-effb9caeb549")
+		)
+		(pin "EN_L" output
+			(at 87.63 59.69 180)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+			(uuid "c8ef62f5-919a-4c96-ac26-46046fe9cee1")
+		)
+		(pin "ISP_DAT" input
+			(at 119.38 55.88 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+			(uuid "1d6cc7ec-98b9-4c1b-bac8-6067cb3bf9ba")
+		)
+		(pin "ISP_CLK" input
+			(at 119.38 58.42 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+			(uuid "b7a4d1ae-35d8-472f-b7c6-ffc956fe44fc")
+		)
+		(pin "AS5600_ADC" input
+			(at 119.38 48.26 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+			(uuid "83917fb4-3af5-4f2a-834d-f00713be4e68")
+		)
+		(pin "SCL" input
+			(at 119.38 66.04 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+			(uuid "1b5e8bdd-84a5-4370-8e76-146434778613")
+		)
+		(pin "SDA" input
+			(at 119.38 68.58 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+			(uuid "c789c63d-d661-4a94-b2d2-036932443afe")
+		)
+		(pin "BUTTON_SET" input
+			(at 119.38 73.66 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+			(uuid "2041809a-acd8-4b39-89be-21cedb2deaa1")
+		)
+		(pin "BUTTON_UP" input
+			(at 119.38 76.2 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+			(uuid "5ec27963-8f88-4784-a122-34ef6daee531")
+		)
+		(pin "BUTTON_DOWN" input
+			(at 119.38 78.74 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+			(uuid "5081d158-544a-41d2-98ba-d25734b803c0")
+		)
+		(pin "BUTTON_SAVE" input
+			(at 119.38 81.28 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+			(uuid "cd74a8b9-ae0d-4282-a7fa-fcb27a7f64ed")
+		)
+		(pin "PWM_OUT2" output
+			(at 87.63 49.53 180)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+			(uuid "73328644-faed-458f-8dbb-6c329994c20c")
+		)
+		(pin "PWM_OUT1" output
+			(at 87.63 44.45 180)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+			(uuid "1c84920a-d385-484c-8c43-d6c58c9de3e1")
+		)
+		(instances
+			(project "BTL_VDK"
+				(path "/4ce841f4-edcb-46e3-8120-4cec64f42791"
+					(page "2")
+				)
+			)
+		)
+	)
+	(sheet_instances
+		(path "/"
+			(page "1")
+		)
+	)
+)

@@ -1,0 +1,172 @@
+#include <16F887.h>
+#fuses HS, NOWDT, NOPROTECT, NOBROWNOUT, NOLVP, NOPUT, NOWRT, NODEBUG, NOCPD
+#use delay(clock = 20000000)
+#use rs232(baud=9600, xmit=PIN_C6, rcv=PIN_C7, bits=8)  // UART TX: C6, RX: C7
+
+#include <lcd.c>
+
+#define DT1 PIN_C0
+#define SCK PIN_C1
+#define TARE_BUTTON PIN_C2
+
+#define use_portb_lcd TRUE
+
+// Thông s? Scale, tùy ch?nh theo cân/hx711 c?a b?n
+double SCALE = 36.0 * 25.595;  
+
+// Các bi?n toàn c?c
+volatile float weight = 0.0;
+volatile int8 unit_mode = 0;
+volatile int16 count_ms = 0;
+volatile int16 tare_debounce_timer = 0;
+
+// M?ng h? s? quy d?i cho 7 lo?i don v?: g, oz, ozt, dwt, ct, gn, tl
+const float unit_factors[] = {
+    1.0,         // g
+    0.03527396,  // oz
+    0.03215075,  // ozt
+    0.6430149,   // dwt
+    5.0,         // ct
+    15.43236,    // gn
+    0.02671725   // tl
+};
+
+volatile int8 last_button_state = 1;
+
+// Ng?t Timer1 (m?i ~20ms)
+#INT_TIMER1
+void timer1_isr()
+{
+    // 65536 - 5000 = 60536 => kho?ng 20ms v?i T1_DIV_BY_2, 20MHz
+    set_timer1(60536);
+    count_ms++;
+
+    // Ð?c nút b?m TARE_BUTTON (d? d?i don v?)
+    int8 current_button_state = input(TARE_BUTTON);
+    if(last_button_state != current_button_state)
+    {
+        current_button_state = input(TARE_BUTTON);
+    }
+    if (current_button_state == 0)
+    {
+        tare_debounce_timer++;
+        if (tare_debounce_timer == 40)  // Gi? nút ~40 * 20ms = 800ms
+        {
+            delay_ms(10);
+            unit_mode = (unit_mode + 1) % 7; // Xoay vòng 7 don v?
+        }
+    }
+    else
+    {
+        tare_debounce_timer = 0;
+    }
+    last_button_state = current_button_state;
+}
+
+// Ð?c raw data t? HX711 (24 bit)
+unsigned int32 readCount(void)
+{
+    unsigned int32 data = 0;
+    unsigned int8 j;
+
+    output_bit(DT1, 1);
+    output_bit(SCK, 0);
+    while (input(DT1)); // Ch? Data line xu?ng th?p (HX711 s?n sàng)
+
+    for (j = 0; j < 24; j++)
+    {
+        output_bit(SCK, 1);
+        data = data << 1;
+        output_bit(SCK, 0);
+        if (input(DT1))
+        {
+            data++;
+        }
+    }
+
+    // L?n clock th? 25: d?c channel & gain (? dây default 128)
+    output_bit(SCK, 1);
+    data = data ^ 0x800000;  // Ð?o bit 24 (d?u)
+    output_bit(SCK, 0);
+
+    return data;
+}
+
+// Ð?c trung bình n l?n d? gi?m nhi?u
+int32 readAverage(void)
+{
+    unsigned int32 sum = 0;
+    int k;
+    for(k = 0; k < 3; k++)
+    {
+        sum += readCount();
+    }
+    return (sum / 3);
+}
+
+void main(void)
+{
+    // Kéo nút TARE_BUTTON lên m?c cao (n?u dùng nút nh?n xu?ng mass)
+    output_high(TARE_BUTTON);
+
+    unsigned int32 offset, read1;
+
+    // Kh?i t?o LCD
+    lcd_init();
+    lcd_putc("HX711 Scale");
+    delay_ms(500);
+
+    // C?u hình Timer1, ng?t m?i 20ms
+    setup_timer_1(T1_INTERNAL | T1_DIV_BY_2);
+    set_timer1(60536);
+    enable_interrupts(INT_TIMER1);
+    enable_interrupts(GLOBAL);
+
+    // Ð?c offset ban d?u (tr?ng thái không t?i)
+    offset = readAverage();
+
+    while(TRUE)
+    {
+        // M?i 20ms d?c cân 1 l?n
+        if (count_ms >= 20)
+        {
+            count_ms = 0;
+            read1 = readAverage();
+
+            // Tính tr?ng lu?ng
+            if (offset >= read1)
+            {
+                weight = (float)(offset - read1) / SCALE;
+                if (weight < 1) weight = 0; // Ngu?ng nh? thì coi nhu 0
+            }
+            else
+            {
+                weight = (float)(read1 - offset) / SCALE;
+                if (weight < 1) weight = 0;
+            }
+
+            // Quy d?i sang don v? hi?n t?i
+            float converted_weight = weight * unit_factors[unit_mode];
+
+            // Hi?n th? LCD
+            lcd_putc("\fWeight:");
+            switch(unit_mode)
+            {
+                case 0: printf(lcd_putc, "\n%.2f g", converted_weight); break;
+                case 1: printf(lcd_putc, "\n%.2f oz", converted_weight); break;
+                case 2: printf(lcd_putc, "\n%.2f ozt", converted_weight); break;
+                case 3: printf(lcd_putc, "\n%.2f dwt", converted_weight); break;
+                case 4: printf(lcd_putc, "\n%.2f ct", converted_weight); break;
+                case 5: printf(lcd_putc, "\n%.2f gn", converted_weight); break;
+                case 6: printf(lcd_putc, "\n%.2f tl", converted_weight); break;
+            }
+
+            // G?i d? li?u UART ch? g?m giá tr? s?, tránh l?i parse bên C#
+            // (M?i dòng: "xx.xx\r\n")
+            printf("%.2f\r\n", converted_weight);
+
+            delay_ms(5);
+        }
+    }
+}
+

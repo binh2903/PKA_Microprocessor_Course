@@ -1,0 +1,33 @@
+@startuml
+title HX711 Scale System - Functional Blocks
+
+start
+:Power Block;
+:Provide stable voltage to the system;
+
+:Sensor Block;
+:Loadcell measures force and converts it to an electrical signal;
+
+:Amplifier & ADC Block;
+:HX711 amplifies the signal and converts it to digital format;
+
+:Central Processing Block;
+:Read data from HX711;
+:Apply Low Pass Filter (LPF);
+:Calculate weight;
+
+:Control Block;
+:Handle user input via buttons;
+:Perform calibration and mode switching;
+
+:Display Block;
+:Show measurement results on LCD;
+
+:Communication Block;
+:Send data via UART;
+
+:Programming Block;
+:Load program into PIC16F887;
+
+stop
+@enduml 

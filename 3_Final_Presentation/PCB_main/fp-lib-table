@@ -1,0 +1,4 @@
+(fp_lib_table
+  (version 7)
+  (lib (name "PIC16F887-I_PT")(type "KiCad")(uri "C:/Users/84886/Desktop/PCB_Project/BTL_PIC/LIB/PIC16F887-I_PT")(options "")(descr ""))
+)

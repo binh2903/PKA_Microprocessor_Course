@@ -1,0 +1,25 @@
+C:\Users\Admin\Desktop\Winform\Giaotiep\obj\Debug\Giaotiep.csproj.AssemblyReference.cache
+C:\Users\Admin\Desktop\Winform\Giaotiep\obj\Debug\Giaotiep.Form1.resources
+C:\Users\Admin\Desktop\Winform\Giaotiep\obj\Debug\Giaotiep.Properties.Resources.resources
+C:\Users\Admin\Desktop\Winform\Giaotiep\obj\Debug\Giaotiep.csproj.GenerateResource.cache
+C:\Users\Admin\Desktop\Winform\Giaotiep\obj\Debug\Giaotiep.csproj.CoreCompileInputs.cache
+C:\Users\Admin\Desktop\Winform\Giaotiep\bin\Debug\Giaotiep.exe.config
+C:\Users\Admin\Desktop\Winform\Giaotiep\bin\Debug\Giaotiep.exe
+C:\Users\Admin\Desktop\Winform\Giaotiep\bin\Debug\Giaotiep.pdb
+C:\Users\Admin\Desktop\Winform\Giaotiep\obj\Debug\Giaotiep.exe
+C:\Users\Admin\Desktop\Winform\Giaotiep\obj\Debug\Giaotiep.pdb
+C:\Users\NguyenAnh\Desktop\Final_ViXuLy\Final_ViXuLy\Winform\Giaotiep\bin\Debug\Giaotiep.exe.config
+C:\Users\NguyenAnh\Desktop\Final_ViXuLy\Final_ViXuLy\Winform\Giaotiep\bin\Debug\Giaotiep.exe
+C:\Users\NguyenAnh\Desktop\Final_ViXuLy\Final_ViXuLy\Winform\Giaotiep\bin\Debug\Giaotiep.pdb
+C:\Users\NguyenAnh\Desktop\Final_ViXuLy\Final_ViXuLy\Winform\Giaotiep\obj\Debug\Giaotiep.csproj.AssemblyReference.cache
+C:\Users\NguyenAnh\Desktop\Final_ViXuLy\Final_ViXuLy\Winform\Giaotiep\obj\Debug\Giaotiep.Form1.resources
+C:\Users\NguyenAnh\Desktop\Final_ViXuLy\Final_ViXuLy\Winform\Giaotiep\obj\Debug\Giaotiep.Properties.Resources.resources
+C:\Users\NguyenAnh\Desktop\Final_ViXuLy\Final_ViXuLy\Winform\Giaotiep\obj\Debug\Giaotiep.csproj.GenerateResource.cache
+C:\Users\NguyenAnh\Desktop\Final_ViXuLy\Final_ViXuLy\Winform\Giaotiep\obj\Debug\Giaotiep.csproj.CoreCompileInputs.cache
+C:\Users\NguyenAnh\Desktop\Final_ViXuLy\Final_ViXuLy\Winform\Giaotiep\obj\Debug\Giaotiep.exe
+C:\Users\NguyenAnh\Desktop\Final_ViXuLy\Final_ViXuLy\Winform\Giaotiep\obj\Debug\Giaotiep.pdb
+C:\Users\Admin\Documents\MY_DOCUMENTS\COURSE_AND_SUBJECT\NAM_3_KY2(DO_AN-OOP-LTDKTD-VXL-DLH_HE_NHIEU_VAT)\KT_VI_XU_LY\BTL CUOI KY\Giaotiep\obj\Debug\Giaotiep.csproj.AssemblyReference.cache
+C:\Users\Admin\Documents\MY_DOCUMENTS\COURSE_AND_SUBJECT\NAM_3_KY2(DO_AN-OOP-LTDKTD-VXL-DLH_HE_NHIEU_VAT)\KT_VI_XU_LY\BTL CUOI KY\Giaotiep\obj\Debug\Giaotiep.Form1.resources
+C:\Users\Admin\Documents\MY_DOCUMENTS\COURSE_AND_SUBJECT\NAM_3_KY2(DO_AN-OOP-LTDKTD-VXL-DLH_HE_NHIEU_VAT)\KT_VI_XU_LY\BTL CUOI KY\Giaotiep\obj\Debug\Giaotiep.csproj.GenerateResource.cache
+C:\Users\Admin\Documents\MY_DOCUMENTS\COURSE_AND_SUBJECT\NAM_3_KY2(DO_AN-OOP-LTDKTD-VXL-DLH_HE_NHIEU_VAT)\KT_VI_XU_LY\BTL CUOI KY\Giaotiep\obj\Debug\Giaotiep.exe
+C:\Users\Admin\Documents\MY_DOCUMENTS\COURSE_AND_SUBJECT\NAM_3_KY2(DO_AN-OOP-LTDKTD-VXL-DLH_HE_NHIEU_VAT)\KT_VI_XU_LY\BTL CUOI KY\Giaotiep\obj\Debug\Giaotiep.pdb
